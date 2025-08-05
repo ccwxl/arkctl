@@ -122,9 +122,11 @@ func execMavenBuild(ctx *contextutil.Context) bool {
 	compileArg := []string{"clean", "package", "-Dmaven.test.skip=true"}
 	if mvnCmd != "" {
 		// custom maven command
-		args := append(compileArg, strings.Split(mvnCmd, " ")...)
-		compileCmd = args[0]
-		compileArg = args[1:]
+		args := strings.Split(mvnCmd, " ")
+		if len(args) > 0 {
+			compileCmd = args[0]
+			compileArg = args[1:]
+		}
 	}
 
 	mvn := cmdutil.BuildCommandWithWorkDir(
