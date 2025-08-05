@@ -51,6 +51,8 @@ var (
 	podFlag      string
 	podNamespace string // pre parsed pod namespace
 	podName      string // pre parsed pod name
+
+	mvnCmd string //custom maven command
 )
 
 const (
@@ -71,16 +73,19 @@ We advice you to use this in local dev phase.
 Scenario 0: Build bundle at current workspace and deploy it to a local running ark container with default port:
     arkctl deploy
 
-Scenario 1: Build bundle at given path and deploy it to local running ark container with given port:
+Scenario 1: Build the bundle using a custom Maven command to compile the project in the current workspace and deploy it to a locally running Ark container on the default port.:
+	arkctl deploy --mvnCmd ${mvnCmd}
+
+Scenario 2: Build bundle at given path and deploy it to local running ark container with given port:
 	arkctl deploy --port ${your ark container portFlag} ${path/to/your/project}
 
-Scenario 2: Deploy a local pre-built bundle to local running ark container:
+Scenario 3: Deploy a local pre-built bundle to local running ark container:
 	arkctl deploy ${path/to/your/pre/built/bundle.jar}
 
-Scenario 3: Build and deploy a bundle at current dir to a remote running ark container in k8s cluster with default port:
+Scenario 4: Build and deploy a bundle at current dir to a remote running ark container in k8s cluster with default port:
 	arkctl deploy --pod ${namespace}/${name}
 
-Scenario 4: Build an maven multi module project and deploy a sub module to a running ark container:
+Scenario 5: Build an maven multi module project and deploy a sub module to a running ark container:
 	arkctl deploy --sub ${path/to/your/sub/module}
 `,
 	Args: func(cmd *cobra.Command, args []string) error {
@@ -113,11 +118,20 @@ func execMavenBuild(ctx *contextutil.Context) bool {
 	style.InfoPrefix("Stage").Println("BuildBundle")
 	style.InfoPrefix("BuildDirectory").Println(defaultArg)
 
+	compileCmd := "mvn"
+	compileArg := []string{"clean", "package", "-Dmaven.test.skip=true"}
+	if mvnCmd != "" {
+		// custom maven command
+		args := append(compileArg, strings.Split(mvnCmd, " ")...)
+		compileCmd = args[0]
+		compileArg = args[1:]
+	}
+
 	mvn := cmdutil.BuildCommandWithWorkDir(
 		ctx,
 		defaultArg,
-		"mvn",
-		"clean", "package", "-Dmaven.test.skip=true")
+		compileCmd,
+		compileArg...)
 	style.InfoPrefix("Command").Println(mvn.String())
 
 	if err := mvn.Exec(); err != nil {
@@ -450,6 +464,11 @@ func init() {
 	DeployCommand.Flags().StringVar(&podFlag, "pod", "", `
 If Provided, arkctl will try to deploy the bundle to the ark container running in given pod.
 `)
+
+	DeployCommand.Flags().StringVar(&mvnCmd, "mvnCmd", "", `
+If Provided, arkctl will try to deploy the mvnCmd to compile maven project.
+`)
+
 	DeployCommand.Flags().StringVar(&subBundlePath, "sub", "", `
 If Provided, arkctl will try to build the project at current dir and deploy the bundle at subBundlePath.
 `)
