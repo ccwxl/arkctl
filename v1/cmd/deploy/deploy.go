@@ -118,16 +118,7 @@ func execMavenBuild(ctx *contextutil.Context) bool {
 	style.InfoPrefix("Stage").Println("BuildBundle")
 	style.InfoPrefix("BuildDirectory").Println(defaultArg)
 
-	compileCmd := "mvn"
-	compileArg := []string{"clean", "package", "-Dmaven.test.skip=true"}
-	if mvnCmd != "" {
-		// custom maven command
-		args := strings.Split(mvnCmd, " ")
-		if len(args) > 0 {
-			compileCmd = args[0]
-			compileArg = args[1:]
-		}
-	}
+	compileCmd, compileArg := parseMavenCommand(mvnCmd)
 
 	mvn := cmdutil.BuildCommandWithWorkDir(
 		ctx,
@@ -165,6 +156,19 @@ func execMavenBuild(ctx *contextutil.Context) bool {
 	pterm.Info.Printfln(pterm.Green("build bundle success!"))
 	pterm.Println()
 	return true
+}
+
+func parseMavenCommand(mvnCmd string) (string, []string) {
+	compileCmd := "mvn"
+	compileArg := []string{"clean", "package", "-Dmaven.test.skip=true"}
+	if mvnCmd != "" {
+		args := strings.Fields(mvnCmd)
+		if len(args) > 0 {
+			compileCmd = args[0]
+			compileArg = args[1:]
+		}
+	}
+	return compileCmd, compileArg
 }
 
 func execParseBizModel(ctx *contextutil.Context) bool {
