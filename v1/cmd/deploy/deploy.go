@@ -53,6 +53,10 @@ var (
 	podName      string // pre parsed pod name
 
 	mvnCmd string //custom maven command
+
+	// default maven compile command and args, centralized to avoid drift with tests
+	defaultMavenCmd  = "mvn"
+	defaultMavenArgs = []string{"clean", "package", "-Dmaven.test.skip=true"}
 )
 
 const (
@@ -159,8 +163,8 @@ func execMavenBuild(ctx *contextutil.Context) bool {
 }
 
 func parseMavenCommand(mvnCmd string) (string, []string) {
-	compileCmd := "mvn"
-	compileArg := []string{"clean", "package", "-Dmaven.test.skip=true"}
+	compileCmd := defaultMavenCmd
+	compileArg := append([]string(nil), defaultMavenArgs...)
 	if mvnCmd != "" {
 		args := strings.Fields(mvnCmd)
 		if len(args) > 0 {
@@ -472,7 +476,9 @@ If Provided, arkctl will try to deploy the bundle to the ark container running i
 `)
 
 	DeployCommand.Flags().StringVar(&mvnCmd, "mvnCmd", "", `
-If Provided, arkctl will try to deploy the mvnCmd to compile maven project.
+If provided, overrides the Maven invocation for building. Example: "mvn -q -T1C" or "./mvnw clean package".
+Tokens are split by whitespace (strings.Fields); shell-style quoting is not supported via this single flag.
+When empty, defaults to: mvn `+strings.Join(defaultMavenArgs, " ")+`.
 `)
 
 	DeployCommand.Flags().StringVar(&subBundlePath, "sub", "", `

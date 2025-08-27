@@ -14,11 +14,16 @@
 package deploy
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestParseMavenCommand(t *testing.T) {
+	t.Parallel()
+
+	defaultArgs := append([]string(nil), defaultMavenArgs...)
+
 	tests := []struct {
 		name     string
 		mvnCmd   string
@@ -28,8 +33,8 @@ func TestParseMavenCommand(t *testing.T) {
 		{
 			name:     "empty command",
 			mvnCmd:   "",
-			wantCmd:  "mvn",
-			wantArgs: []string{"clean", "package", "-Dmaven.test.skip=true"},
+			wantCmd:  defaultMavenCmd,
+			wantArgs: defaultArgs,
 		},
 		{
 			name:     "custom command without args",
@@ -55,16 +60,60 @@ func TestParseMavenCommand(t *testing.T) {
 			wantCmd:  "mvn",
 			wantArgs: []string{"clean", "package"},
 		},
+		{
+			name:     "whitespace-only command",
+			mvnCmd:   " \t\n ",
+			wantCmd:  defaultMavenCmd,
+			wantArgs: defaultArgs,
+		},
+		{
+			name:     "leading and trailing spaces",
+			mvnCmd:   "   mvn clean package   ",
+			wantCmd:  "mvn",
+			wantArgs: []string{"clean", "package"},
+		},
+		{
+			name:     "tabs between tokens",
+			mvnCmd:   "mvn\tclean\tinstall",
+			wantCmd:  "mvn",
+			wantArgs: []string{"clean", "install"},
+		},
+		{
+			name:     "windows wrapper with flags",
+			mvnCmd:   "mvnw.cmd -q -T1C",
+			wantCmd:  "mvnw.cmd",
+			wantArgs: []string{"-q", "-T1C"},
+		},
+		{
+			name:     "absolute path mvn",
+			mvnCmd:   "/usr/local/bin/mvn -q",
+			wantCmd:  "/usr/local/bin/mvn",
+			wantArgs: []string{"-q"},
+		},
+		{
+			name:     "relative path wrapper",
+			mvnCmd:   "./mvnw -q",
+			wantCmd:  "./mvnw",
+			wantArgs: []string{"-q"},
+		},
+		{
+			name:     "args with equals and profile",
+			mvnCmd:   "mvn -DskipTests=true -Pprod",
+			wantCmd:  "mvn",
+			wantArgs: []string{"-DskipTests=true", "-Pprod"},
+		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			gotCmd, gotArgs := parseMavenCommand(tt.mvnCmd)
 			if gotCmd != tt.wantCmd {
-				t.Errorf("parseMavenCommand() gotCmd = %v, want %v", gotCmd, tt.wantCmd)
+				t.Errorf("parseMavenCommand() gotCmd = %q, want %q", gotCmd, tt.wantCmd)
 			}
-			if !reflect.DeepEqual(gotArgs, tt.wantArgs) {
-				t.Errorf("parseMavenCommand() gotArgs = %v, want %v", gotArgs, tt.wantArgs)
+			if diff := cmp.Diff(tt.wantArgs, gotArgs); diff != "" {
+				t.Errorf("parseMavenCommand() args mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
