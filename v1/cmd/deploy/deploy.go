@@ -479,6 +479,7 @@ If Provided, arkctl will try to deploy the bundle to the ark container running i
 If provided, overrides the Maven invocation for building. Example: "mvn -q -T1C" or "./mvnw clean package".
 Tokens are split by whitespace (strings.Fields); shell-style quoting is not supported via this single flag.
 When empty, defaults to: mvn `+strings.Join(defaultMavenArgs, " ")+`.
+Note: providing any non-empty value replaces the default arguments entirely. Supplying just "mvn" or "mvnw" yields no default goals.
 `)
 
 	DeployCommand.Flags().StringVar(&subBundlePath, "sub", "", `

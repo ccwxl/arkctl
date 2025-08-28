@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func TestParseMavenCommand(t *testing.T) {
@@ -102,6 +103,24 @@ func TestParseMavenCommand(t *testing.T) {
 			wantCmd:  "mvn",
 			wantArgs: []string{"-DskipTests=true", "-Pprod"},
 		},
+		{
+			name:     "thread-count with separate value",
+			mvnCmd:   "mvn -T 1C",
+			wantCmd:  "mvn",
+			wantArgs: []string{"-T", "1C"},
+		},
+		{
+			name:     "multiple profiles in one flag",
+			mvnCmd:   "mvn -Pprod,dev",
+			wantCmd:  "mvn",
+			wantArgs: []string{"-Pprod,dev"},
+		},
+		{
+			name:     "reactor and project list",
+			mvnCmd:   "mvn -am -pl :module",
+			wantCmd:  "mvn",
+			wantArgs: []string{"-am", "-pl", ":module"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -112,7 +131,7 @@ func TestParseMavenCommand(t *testing.T) {
 			if gotCmd != tt.wantCmd {
 				t.Errorf("parseMavenCommand() gotCmd = %q, want %q", gotCmd, tt.wantCmd)
 			}
-			if diff := cmp.Diff(tt.wantArgs, gotArgs); diff != "" {
+			if diff := cmp.Diff(tt.wantArgs, gotArgs, cmpopts.EquateEmpty()); diff != "" {
 				t.Errorf("parseMavenCommand() args mismatch (-want +got):\n%s", diff)
 			}
 		})
